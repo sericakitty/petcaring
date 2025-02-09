@@ -1,6 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { RootStackParamList } from "../types/navigation";
@@ -81,7 +81,7 @@ const CustomTabBar = ({
         }
 
         return (
-          <TouchableOpacity
+          <Pressable
             key={route.key}
             onPress={onPress}
             style={styles.tabItem}
@@ -94,7 +94,7 @@ const CustomTabBar = ({
             <Text style={{ color: isFocused ? "tomato" : "gray" }}>
               {label}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>
