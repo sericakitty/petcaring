@@ -1,0 +1,18 @@
+{
+  "extends": "@tsconfig/react-native/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,  
+    "noEmit": true,   
+    "skipLibCheck": true,
+    "strict": true,
+    "types": []
+  },
+  "include": [
+    "src",
+    "index.js",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx"
+  ]
+}
