@@ -3,6 +3,8 @@
 # dependencies
 node_modules/
 
+android
+
 # Expo
 .expo/
 dist/
@@ -34,3 +36,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# multiple emulators
+android-1.sh
+android-2.sh
