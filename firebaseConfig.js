@@ -8,7 +8,6 @@ const firebaseConfig = {
   projectId: process.env.EXPO_PUBLIC_PROJECTID,
   messagingSenderId: process.env.EXPO_PUBLIC_MESSAGINGSENDERID,
 };
-console.log(firebaseConfig.apiKey);
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
