@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -8,7 +9,17 @@ import {
   Pressable,
 } from "react-native";
 import { auth } from "../../firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { AuthError, createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  doc,
+  setDoc,
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  FirestoreError,
+} from "firebase/firestore";
 import { TabNavigationProps } from "../types/navigation";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -24,6 +35,7 @@ type RegisterViewProps = {
  * @returns Register view component
  */
 const RegisterView: React.FC<RegisterViewProps> = ({ navigation }) => {
+  const [userName, setUserName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -37,7 +49,7 @@ const RegisterView: React.FC<RegisterViewProps> = ({ navigation }) => {
     passwordsMatch: false,
   });
 
-  const validatePassword = (password: string) => {
+  const validatePassword = (password: string, confirmPass: string) => {
     const specialChars = /[\^$*.\[\]{}()?"!@#%&\/\\,><':;|_~`]/;
     setPasswordValidations({
       minLength: password.length >= 8,
@@ -45,11 +57,41 @@ const RegisterView: React.FC<RegisterViewProps> = ({ navigation }) => {
       lowercase: /[a-z]/.test(password),
       specialChar: new RegExp(specialChars).test(password),
       number: /[0-9]/.test(password),
-      passwordsMatch: password === confirmPassword,
+      passwordsMatch: password === confirmPass,
     });
   };
 
+  const resetInputFields = () => {
+    setUserName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setPasswordValidations({
+      minLength: false,
+      uppercase: false,
+      lowercase: false,
+      specialChar: false,
+      number: false,
+      passwordsMatch: false,
+    });
+  };
+
+  // Reset input fields when screen loses focus
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        resetInputFields();
+      };
+    }, []),
+  );
+
   const handleRegister = async () => {
+    if (!userName || !email || !password || !confirmPassword) {
+      Alert.alert("Error", "Please fill in all fields!");
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match!");
       return;
@@ -62,10 +104,38 @@ const RegisterView: React.FC<RegisterViewProps> = ({ navigation }) => {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const db = getFirestore();
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("userName", "==", userName));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        Alert.alert("Error", "Username already exists!");
+        return;
+      }
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      const uid = userCredential.user.uid;
+      const userDoc = doc(db, "users", uid);
+      await setDoc(userDoc, {
+        userName,
+        email, // Save email to firestore so we can use it if user want to login with username
+        pets: [],
+        createdAt: new Date(),
+      });
+
       Alert.alert("Success", "User registered successfully!");
-      navigation.navigate("Home");
-    } catch (error: any) {
+      resetInputFields();
+      navigation.navigate("Login");
+    } catch (e) {
+      const error = e as FirestoreError | AuthError;
+      if (error.code === "auth/email-already-in-use") {
+        Alert.alert("Error", "Email already in use!");
+        return;
+      }
       Alert.alert("Error", error.message);
     }
   };
@@ -74,9 +144,15 @@ const RegisterView: React.FC<RegisterViewProps> = ({ navigation }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
       <TextInput
+        placeholder="Username"
+        style={styles.input}
+        onChangeText={(text) => setUserName(text.trim())}
+        value={userName}
+      />
+      <TextInput
         placeholder="Email"
         style={styles.input}
-        onChangeText={setEmail}
+        onChangeText={(text) => setEmail(text.trim().toLocaleLowerCase())}
         value={email}
       />
       <View style={styles.passwordContainer}>
@@ -85,8 +161,9 @@ const RegisterView: React.FC<RegisterViewProps> = ({ navigation }) => {
           secureTextEntry={!showPassword}
           style={styles.passwordInput}
           onChangeText={(text) => {
+            text = text.trim();
             setPassword(text);
-            validatePassword(text);
+            validatePassword(text, confirmPassword);
           }}
           value={password}
         />
@@ -108,7 +185,7 @@ const RegisterView: React.FC<RegisterViewProps> = ({ navigation }) => {
           style={styles.passwordInput}
           onChangeText={(text) => {
             setConfirmPassword(text);
-            validatePassword(password);
+            validatePassword(password, text);
           }}
           value={confirmPassword}
         />
